@@ -48,8 +48,8 @@ The list is intentionally explicit. An untested future Histoire version is not p
 
 3. Run `pnpm release`. Bumpp updates the package version, creates a conventional release commit and
    a lightweight `v<version>` tag, then pushes both.
-4. The tag starts the release workflow, which publishes that exact package version to npmjs using
-   GitHub Actions trusted publishing (OIDC).
+4. The tag starts the release workflow, which generates the GitHub release and publishes that exact
+   package version to npmjs using GitHub Actions trusted publishing (OIDC).
 
 The npm package's trusted publisher must be configured with these values:
 
