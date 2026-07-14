@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Set up publishing tools
+        run: |
+          npm install --global npm@11 corepack@0.34.6
+          corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate release tag and package version
+        if: github.event_name == 'push'
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          PACKAGE_VERSION=$(node --print "require('./package.json').version")
+          test "$RELEASE_TAG" = "v$PACKAGE_VERSION"
+
+      - name: Run unit tests
+        run: pnpm test
+
+      - name: Verify patches against supported Histoire versions
+        run: pnpm check:patches
+
+      - name: Test pnpm config dependency integration
+        run: pnpm test:integration
+
+      - name: Publish package
+        run: |
+          PACKAGE_NAME=$(node --print "require('./package.json').name")
+          PACKAGE_VERSION=$(node --print "require('./package.json').version")
+          PACKAGE_SPEC="$PACKAGE_NAME@$PACKAGE_VERSION"
+
+          if REMOTE_INTEGRITY=$(npm view "$PACKAGE_SPEC" dist.integrity 2>/dev/null); then
+            LOCAL_INTEGRITY=$(npm pack --json --dry-run --ignore-scripts | node --input-type=module --eval \
+              "let value = ''; for await (const chunk of process.stdin) value += chunk; console.log(JSON.parse(value)[0].integrity)")
+            test "$LOCAL_INTEGRITY" = "$REMOTE_INTEGRITY"
+            echo "$PACKAGE_SPEC is already published with matching integrity"
+          else
+            npm publish
+          fi

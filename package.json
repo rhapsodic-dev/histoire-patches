@@ -1,0 +1,43 @@
+{
+  "name": "@rhapsodic/pnpm-plugin-histoire-patches",
+  "version": "1.0.1",
+  "description": "Shared pnpm patches for Histoire packages used by Rhapsodic projects",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rhapsodic-dev/histoire-patches.git"
+  },
+  "type": "module",
+  "files": [
+    "compatibility.mjs",
+    "patches",
+    "pnpmfile.mjs",
+    "README.md"
+  ],
+  "scripts": {
+    "check:patches": "node scripts/check-patches.mjs",
+    "hooks:install": "pnpm exec simple-git-hooks",
+    "prepare": "pnpm run hooks:install",
+    "release": "bumpp",
+    "test": "node --test",
+    "test:integration": "node scripts/check-integration.mjs"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
+    "bumpp": "^11.1.0",
+    "simple-git-hooks": "^2.13.1"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=11"
+  },
+  "simple-git-hooks": {
+    "commit-msg": "pnpm exec commitlint --edit"
+  },
+  "packageManager": "pnpm@11.7.0+sha512.19cc852c120c7125760f2443ee6be0ca5b40f9f50598de1a09a1f177503e010e57c23c77646e01e761de59bf874fb22a3398c33ab9691fc13eb946b6f0f4d620"
+}

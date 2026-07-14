@@ -1,0 +1,166 @@
+import { spawn } from 'node:child_process'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { createServer } from 'node:http'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const packageManifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url)))
+const packageRoot = fileURLToPath(new URL('..', import.meta.url))
+
+function run(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      stdio: options.capture ? ['ignore', 'pipe', 'inherit'] : 'inherit',
+      ...options,
+    })
+    let output = ''
+
+    if (options.capture) {
+      child.stdout.setEncoding('utf8')
+      child.stdout.on('data', (chunk) => {
+        output += chunk
+      })
+    }
+
+    child.on('error', reject)
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve(output)
+      }
+      else {
+        reject(new Error(`${command} exited with code ${code}`))
+      }
+    })
+  })
+}
+
+async function startPackageServer(packResult, packageTarball) {
+  const tarball = await readFile(packageTarball)
+  const packagePath = `/${packageManifest.name}`
+  const tarballPath = `${packagePath}/-/${packResult.filename}`
+  const server = createServer((request, response) => {
+    const requestPath = decodeURIComponent(new URL(request.url, 'http://127.0.0.1').pathname)
+
+    if (requestPath === tarballPath) {
+      response.writeHead(200, { 'content-type': 'application/octet-stream' })
+      response.end(tarball)
+      return
+    }
+
+    if (requestPath === packagePath) {
+      const address = server.address()
+      const registryUrl = `http://127.0.0.1:${address.port}`
+      const versionManifest = {
+        ...packageManifest,
+        dist: {
+          integrity: packResult.integrity,
+          shasum: packResult.shasum,
+          tarball: `${registryUrl}${tarballPath}`,
+        },
+      }
+      const metadata = {
+        name: packageManifest.name,
+        'dist-tags': {
+          latest: packageManifest.version,
+        },
+        versions: {
+          [packageManifest.version]: versionManifest,
+        },
+      }
+
+      response.writeHead(200, { 'content-type': 'application/json' })
+      response.end(JSON.stringify(metadata))
+      return
+    }
+
+    response.writeHead(404)
+    response.end()
+  })
+
+  await new Promise((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', resolve)
+  })
+
+  return server
+}
+
+async function main() {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'histoire-patch-integration-'))
+  let packageServer
+
+  try {
+    const fixtureDirectory = path.join(temporaryRoot, 'fixture')
+    const packOutput = await run('npm', [
+      'pack',
+      '--json',
+      '--ignore-scripts',
+      '--pack-destination',
+      temporaryRoot,
+    ], {
+      capture: true,
+      cwd: packageRoot,
+    })
+    const [packResult] = JSON.parse(packOutput)
+    const packageTarball = path.join(temporaryRoot, packResult.filename)
+
+    packageServer = await startPackageServer(packResult, packageTarball)
+    const packageServerAddress = packageServer.address()
+    const packageRegistry = `http://127.0.0.1:${packageServerAddress.port}/`
+
+    await mkdir(fixtureDirectory)
+
+    await writeFile(path.join(fixtureDirectory, 'package.json'), `${JSON.stringify({
+      name: 'histoire-patch-integration',
+      private: true,
+      packageManager: 'pnpm@11.7.0',
+      devDependencies: {
+        '@histoire/app': '1.0.0-beta.1',
+      },
+    }, undefined, 2)}\n`)
+    await writeFile(path.join(fixtureDirectory, 'pnpm-workspace.yaml'), [
+      'allowBuilds:',
+      '  esbuild: true',
+      '',
+    ].join('\n'))
+    await writeFile(
+      path.join(fixtureDirectory, '.npmrc'),
+      `@rhapsodic:registry=${packageRegistry}\n`,
+    )
+
+    await run('corepack', ['pnpm', 'add', '--config', `${packageManifest.name}@${packageManifest.version}`], {
+      cwd: fixtureDirectory,
+    })
+    await run('corepack', ['pnpm', 'install'], { cwd: fixtureDirectory })
+
+    const storyView = await readFile(path.join(
+      fixtureDirectory,
+      'node_modules/@histoire/app/src/app/components/story/StoryView.vue',
+    ), 'utf8')
+
+    if (!storyView.includes('storyStore.currentStory?.variants.length)')) {
+      throw new Error('The installed @histoire/app package was not patched')
+    }
+
+    if (storyView.includes('storyStore.currentStory?.lastSelectedVariant')) {
+      throw new Error('The installed @histoire/app package still contains the replaced selection logic')
+    }
+
+    process.stdout.write('pnpm automatically loaded and applied the Histoire patch\n')
+  }
+  finally {
+    if (packageServer) {
+      await new Promise(resolve => packageServer.close(resolve))
+    }
+
+    if (process.env.KEEP_INTEGRATION_FIXTURE === 'true') {
+      process.stdout.write(`Kept integration fixture at ${temporaryRoot}\n`)
+    }
+    else {
+      await rm(temporaryRoot, { force: true, recursive: true })
+    }
+  }
+}
+
+await main()
