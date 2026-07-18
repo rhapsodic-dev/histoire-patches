@@ -3,11 +3,16 @@
 Shared, reproducible pnpm patches for Histoire packages used by Rhapsodic projects.
 
 The package is a [pnpm config dependency](https://pnpm.io/config-dependencies). pnpm installs it
-before regular dependencies and automatically loads `pnpmfile.mjs`, which registers the patch for
-every explicitly supported `@histoire/app` version.
+before regular dependencies and automatically loads `pnpmfile.mjs`, which registers patches for
+every explicitly supported `@histoire/app` and `@histoire/plugin-vue` version.
 
-The patch selects the first variant when a story opens and suppresses the empty-state icon while a
-story route is resolving, avoiding a brief icon flash between the sidebar click and story render.
+The patches:
+
+- select the first variant when a story opens;
+- suppress the empty-state icon while a story route is resolving;
+- keep iframe previews invisible until their documents load and their variants report preview
+  readiness;
+- report Vue story readiness only after the story's Suspense boundary resolves.
 
 ## Consumer setup
 
@@ -26,7 +31,8 @@ Do not write the `configDependencies` entry manually. pnpm writes the version to
 After that, ordinary `pnpm install` and `pnpm update` commands apply the patch automatically. The
 resolved config-package version and integrity are recorded in `pnpm-lock.yaml`.
 
-Do not add another `patchedDependencies` entry for `@histoire/app` in the consuming repository.
+Do not add another `patchedDependencies` entry for `@histoire/app` or
+`@histoire/plugin-vue` in the consuming repository.
 
 ## Supported Histoire versions
 
@@ -66,6 +72,6 @@ No npm token is stored in GitHub. The workflow receives a short-lived publishing
 npm through GitHub's OIDC identity. If the package version already exists, the workflow exits
 successfully because npm package versions are immutable.
 
-If the existing patch no longer applies, publish a new major config-package version for the new
-artifact family. The plugin rejects unsupported `@histoire/app` versions so an upstream upgrade
-cannot silently lose the fix.
+If an existing patch no longer applies, publish a new major config-package version for the new
+artifact family. The plugin rejects unsupported versions of either patched package so an upstream
+upgrade cannot silently lose a fix.

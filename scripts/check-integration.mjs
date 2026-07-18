@@ -117,6 +117,7 @@ async function main() {
       packageManager: 'pnpm@11.7.0',
       devDependencies: {
         '@histoire/app': '1.0.0-beta.1',
+        '@histoire/plugin-vue': '1.0.0-beta.1',
       },
     }, undefined, 2)}\n`)
     await writeFile(path.join(fixtureDirectory, 'pnpm-workspace.yaml'), [
@@ -142,8 +143,28 @@ async function main() {
       fixtureDirectory,
       'node_modules/@histoire/app/dist/bundled/components/story/StoryView.vue2.js',
     )
+    const previewPath = path.join(
+      fixtureDirectory,
+      'node_modules/@histoire/app/src/app/components/story/StoryVariantSinglePreviewRemote.vue',
+    )
+    const bundledPreviewPath = path.join(
+      fixtureDirectory,
+      'node_modules/@histoire/app/dist/bundled/components/story/StoryVariantSinglePreviewRemote.vue2.js',
+    )
+    const renderStoryPath = path.join(
+      fixtureDirectory,
+      'node_modules/@histoire/plugin-vue/src/client/app/RenderStory.ts',
+    )
+    const bundledRenderStoryPath = path.join(
+      fixtureDirectory,
+      'node_modules/@histoire/plugin-vue/dist/bundled/client/app/RenderStory.js',
+    )
     const storyView = await readFile(storyViewPath, 'utf8')
     const bundledStoryView = await readFile(bundledStoryViewPath, 'utf8')
+    const preview = await readFile(previewPath, 'utf8')
+    const bundledPreview = await readFile(bundledPreviewPath, 'utf8')
+    const renderStory = await readFile(renderStoryPath, 'utf8')
+    const bundledRenderStory = await readFile(bundledRenderStoryPath, 'utf8')
 
     if (!storyView.includes('storyStore.currentStory?.variants.length)')) {
       throw new Error('The installed @histoire/app package was not patched')
@@ -161,9 +182,35 @@ async function main() {
       throw new Error('The installed @histoire/app bundle still flashes the empty-state icon during story navigation')
     }
 
-    await run('node', ['--check', bundledStoryViewPath])
+    if (!preview.includes("'htw-invisible': !isIframeLoaded || !variant.previewReady")) {
+      throw new Error('The installed @histoire/app package exposes the iframe before its preview is ready')
+    }
 
-    process.stdout.write('pnpm automatically loaded and applied the Histoire patch\n')
+    if (!bundledPreview.includes('!isIframeLoaded.value || !__props.variant.previewReady')) {
+      throw new Error('The installed @histoire/app bundle exposes the iframe before its preview is ready')
+    }
+
+    if (!renderStory.includes("h(Suspense, { onResolve: () => emit('ready') }")) {
+      throw new Error('The installed @histoire/plugin-vue package does not wait for Suspense before reporting readiness')
+    }
+
+    if (!bundledRenderStory.includes('d(k, { onResolve: () => w("ready") }')) {
+      throw new Error('The installed @histoire/plugin-vue bundle does not wait for Suspense before reporting readiness')
+    }
+
+    if (/app\.mount\(target\)\s+emit\('ready'\)/.test(renderStory)) {
+      throw new Error('The installed @histoire/plugin-vue package still reports readiness immediately after mount')
+    }
+
+    if (/o\.mount\(e\),\s*w\("ready"\)/.test(bundledRenderStory)) {
+      throw new Error('The installed @histoire/plugin-vue bundle still reports readiness immediately after mount')
+    }
+
+    await run('node', ['--check', bundledStoryViewPath])
+    await run('node', ['--check', bundledPreviewPath])
+    await run('node', ['--check', bundledRenderStoryPath])
+
+    process.stdout.write('pnpm automatically loaded and applied the Histoire patches\n')
   }
   finally {
     if (packageServer) {

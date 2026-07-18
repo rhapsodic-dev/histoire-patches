@@ -8,10 +8,11 @@ test('creates an explicit selector for every supported version', () => {
 
   assert.deepEqual(selectors, [
     '@histoire/app@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1',
+    '@histoire/plugin-vue@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1',
   ])
 })
 
-test('registers the shared patch without replacing other patches', () => {
+test('registers both shared patches without replacing other patches', () => {
   const config = {
     patchedDependencies: {
       'example@1.0.0': 'patches/example.patch',
@@ -25,36 +26,44 @@ test('registers the shared patch without replacing other patches', () => {
   assert.deepEqual(result.patchedDependencies, {
     'example@1.0.0': 'patches/example.patch',
     '@histoire/app@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1':
-      'node_modules/.pnpm-config/@rhapsodic/pnpm-plugin-histoire-patches/patches/auto-select-first-variant.patch',
+      'node_modules/.pnpm-config/@rhapsodic/pnpm-plugin-histoire-patches/patches/histoire-app.patch',
+    '@histoire/plugin-vue@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1':
+      'node_modules/.pnpm-config/@rhapsodic/pnpm-plugin-histoire-patches/patches/histoire-plugin-vue.patch',
   })
 })
 
-test('accepts supported Histoire app versions', () => {
-  const packageManifest = {
-    name: '@histoire/app',
-    version: '1.0.0-beta.1',
-  }
+test('accepts supported Histoire package versions', () => {
+  for (const name of ['@histoire/app', '@histoire/plugin-vue']) {
+    const packageManifest = {
+      name,
+      version: '1.0.0-beta.1',
+    }
 
-  assert.equal(hooks.readPackage(packageManifest), packageManifest)
+    assert.equal(hooks.readPackage(packageManifest), packageManifest)
+  }
 })
 
-test('rejects unsupported Histoire app versions', () => {
-  assert.throws(
-    () => hooks.readPackage({ name: '@histoire/app', version: '1.0.0-beta.2' }),
-    /No Rhapsodic Histoire patch supports @histoire\/app@1\.0\.0-beta\.2/,
-  )
+test('rejects unsupported Histoire package versions', () => {
+  for (const name of ['@histoire/app', '@histoire/plugin-vue']) {
+    assert.throws(
+      () => hooks.readPackage({ name, version: '1.0.0-beta.2' }),
+      new RegExp(`No Rhapsodic Histoire patch supports ${name.replace('/', '\\/')}@1\\.0\\.0-beta\\.2`),
+    )
+  }
 })
 
-test('rejects a conflicting patch for the same selector', () => {
-  const selector = createPackageSelector(histoirePatchGroups[0])
-  const config = {
-    patchedDependencies: {
-      [selector]: 'patches/another.patch',
-    },
-  }
+test('rejects conflicting patches for either selector', () => {
+  for (const group of histoirePatchGroups) {
+    const selector = createPackageSelector(group)
+    const config = {
+      patchedDependencies: {
+        [selector]: 'patches/another.patch',
+      },
+    }
 
-  assert.throws(
-    () => hooks.updateConfig(config),
-    new RegExp(`Conflicting patch configured for ${selector.replaceAll('.', '\\.')}`),
-  )
+    assert.throws(
+      () => hooks.updateConfig(config),
+      new RegExp(`Conflicting patch configured for ${selector.replaceAll('.', '\\.')}`),
+    )
+  }
 })

@@ -1,5 +1,16 @@
+diff --git a/dist/bundled/components/story/StoryVariantSinglePreviewRemote.vue2.js b/dist/bundled/components/story/StoryVariantSinglePreviewRemote.vue2.js
+--- a/dist/bundled/components/story/StoryVariantSinglePreviewRemote.vue2.js
++++ b/dist/bundled/components/story/StoryVariantSinglePreviewRemote.vue2.js
+@@ -107,7 +107,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
+             ref: iframe,
+             src: sandboxUrl.value,
+             class: normalizeClass(["htw-w-full htw-h-full htw-relative", {
+-              "htw-invisible": !isIframeLoaded.value,
++              "htw-invisible": !isIframeLoaded.value || !__props.variant.previewReady,
+               "htw-pointer-events-none": resizing
+             }]),
+             style: normalizeStyle(isResponsiveEnabled ? {
 diff --git a/dist/bundled/components/story/StoryView.vue2.js b/dist/bundled/components/story/StoryView.vue2.js
-index c755cf213c87017d42d5057d3e389562e74a5b6b..ec1e3b30848c56a83ef292aa08b467e8e13caec7 100644
 --- a/dist/bundled/components/story/StoryView.vue2.js
 +++ b/dist/bundled/components/story/StoryView.vue2.js
 @@ -1,4 +1,4 @@
@@ -35,8 +46,19 @@ index c755cf213c87017d42d5057d3e389562e74a5b6b..ec1e3b30848c56a83ef292aa08b467e8
          ]),
          _: 1
        })) : (openBlock(), createElementBlock("div", _hoisted_1, [
+diff --git a/src/app/components/story/StoryVariantSinglePreviewRemote.vue b/src/app/components/story/StoryVariantSinglePreviewRemote.vue
+--- a/src/app/components/story/StoryVariantSinglePreviewRemote.vue
++++ b/src/app/components/story/StoryVariantSinglePreviewRemote.vue
+@@ -129,7 +129,7 @@ function onIframeLoad() {
+       :src="sandboxUrl"
+       class="htw-w-full htw-h-full htw-relative"
+       :class="{
+-        'htw-invisible': !isIframeLoaded,
++        'htw-invisible': !isIframeLoaded || !variant.previewReady,
+         'htw-pointer-events-none': resizing,
+       }"
+       :style="isResponsiveEnabled ? {
 diff --git a/src/app/components/story/StoryView.vue b/src/app/components/story/StoryView.vue
-index 129cf2655f7ebee1114c3aa6ed4cbeb164410d04..8271c1fabde53ecd02c3f757cb05e4ff3f30a22b 100644
 --- a/src/app/components/story/StoryView.vue
 +++ b/src/app/components/story/StoryView.vue
 @@ -28,12 +28,7 @@ watch(() => storyStore.currentVariant, (value) => {

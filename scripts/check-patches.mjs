@@ -35,7 +35,11 @@ async function main() {
       const patchPath = path.join(repositoryRoot, group.patchFile)
 
       for (const version of group.versions) {
-        const targetDirectory = path.join(temporaryRoot, version)
+        const targetDirectory = path.join(
+          temporaryRoot,
+          group.packageName.replaceAll('/', '-'),
+          version,
+        )
         const packDirectory = path.join(targetDirectory, 'pack')
         const extractDirectory = path.join(targetDirectory, 'extract')
 

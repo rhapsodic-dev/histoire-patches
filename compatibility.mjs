@@ -1,7 +1,17 @@
 export const histoirePatchGroups = [
   {
     packageName: '@histoire/app',
-    patchFile: 'patches/auto-select-first-variant.patch',
+    patchFile: 'patches/histoire-app.patch',
+    versions: [
+      '1.0.0-alpha.3',
+      '1.0.0-alpha.4',
+      '1.0.0-alpha.5',
+      '1.0.0-beta.1',
+    ],
+  },
+  {
+    packageName: '@histoire/plugin-vue',
+    patchFile: 'patches/histoire-plugin-vue.patch',
     versions: [
       '1.0.0-alpha.3',
       '1.0.0-alpha.4',
@@ -15,6 +25,6 @@ export function createPackageSelector(group) {
   return `${group.packageName}@${group.versions.join(' || ')}`
 }
 
-export const supportedHistoireAppVersions = new Set(
-  histoirePatchGroups.flatMap(group => group.versions),
+export const supportedHistoirePackageVersions = new Map(
+  histoirePatchGroups.map(group => [group.packageName, new Set(group.versions)]),
 )

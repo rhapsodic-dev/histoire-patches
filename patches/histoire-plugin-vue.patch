@@ -1,0 +1,37 @@
+diff --git a/dist/bundled/client/app/RenderStory.js b/dist/bundled/client/app/RenderStory.js
+--- a/dist/bundled/client/app/RenderStory.js
++++ b/dist/bundled/client/app/RenderStory.js
+@@ -69,5 +69,5 @@ const W = P({
+               }, () => n[r])
+             );
+-          return n.push(d("div", n.at(-1))), n.push(d(k, {}, n.at(-1))), n.at(-1);
++          return n.push(d("div", n.at(-1))), n.push(d(k, { onResolve: () => w("ready") }, n.at(-1))), n.at(-1);
+         }
+       }), O(o), o.component("RouterLink", B);
+@@ -98,5 +98,5 @@ const W = P({
+       u.reverse();
+       const e = document.createElement("div");
+-      y.value.appendChild(e), o.mount(e), w("ready");
++      y.value.appendChild(e), o.mount(e);
+     }
+     function h(i) {
+diff --git a/src/client/app/RenderStory.ts b/src/client/app/RenderStory.ts
+--- a/src/client/app/RenderStory.ts
++++ b/src/client/app/RenderStory.ts
+@@ -122,6 +122,6 @@ export default _defineComponent({
+           // Wrap in div to ensure only one root element
+           children.push(h('div', children.at(-1)))
+           // Wrap in Suspense to render async components
+-          children.push(h(Suspense, {}, children.at(-1)))
++          children.push(h(Suspense, { onResolve: () => emit('ready') }, children.at(-1)))
+ 
+           return children.at(-1)
+@@ -162,8 +162,6 @@ export default _defineComponent({
+       const target = document.createElement('div')
+       sandbox.value.appendChild(target)
+       app.mount(target)
+-
+-      emit('ready')
+     }
+ 
+     function scanForAutoProps(vnodes: any[]) {

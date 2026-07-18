@@ -1,20 +1,18 @@
 import {
   createPackageSelector,
   histoirePatchGroups,
-  supportedHistoireAppVersions,
+  supportedHistoirePackageVersions,
 } from './compatibility.mjs'
 
 const configPackageName = '@rhapsodic/pnpm-plugin-histoire-patches'
 
 export const hooks = {
   readPackage(packageManifest) {
-    if (
-      packageManifest.name === '@histoire/app'
-      && !supportedHistoireAppVersions.has(packageManifest.version)
-    ) {
-      const supportedVersions = [...supportedHistoireAppVersions].join(', ')
+    const supportedVersions = supportedHistoirePackageVersions.get(packageManifest.name)
+
+    if (supportedVersions && !supportedVersions.has(packageManifest.version)) {
       throw new Error(
-        `No Rhapsodic Histoire patch supports @histoire/app@${packageManifest.version}. Supported versions: ${supportedVersions}`,
+        `No Rhapsodic Histoire patch supports ${packageManifest.name}@${packageManifest.version}. Supported versions: ${[...supportedVersions].join(', ')}`,
       )
     }
 
