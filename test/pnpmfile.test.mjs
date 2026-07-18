@@ -9,10 +9,11 @@ test('creates an explicit selector for every supported version', () => {
   assert.deepEqual(selectors, [
     '@histoire/app@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1',
     '@histoire/plugin-vue@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1',
+    '@histoire/plugin-nuxt@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1',
   ])
 })
 
-test('registers both shared patches without replacing other patches', () => {
+test('registers all shared patches without replacing other patches', () => {
   const config = {
     patchedDependencies: {
       'example@1.0.0': 'patches/example.patch',
@@ -29,11 +30,13 @@ test('registers both shared patches without replacing other patches', () => {
       'node_modules/.pnpm-config/@rhapsodic/pnpm-plugin-histoire-patches/patches/histoire-app.patch',
     '@histoire/plugin-vue@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1':
       'node_modules/.pnpm-config/@rhapsodic/pnpm-plugin-histoire-patches/patches/histoire-plugin-vue.patch',
+    '@histoire/plugin-nuxt@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1':
+      'node_modules/.pnpm-config/@rhapsodic/pnpm-plugin-histoire-patches/patches/histoire-plugin-nuxt.patch',
   })
 })
 
 test('accepts supported Histoire package versions', () => {
-  for (const name of ['@histoire/app', '@histoire/plugin-vue']) {
+  for (const name of ['@histoire/app', '@histoire/plugin-vue', '@histoire/plugin-nuxt']) {
     const packageManifest = {
       name,
       version: '1.0.0-beta.1',
@@ -44,7 +47,7 @@ test('accepts supported Histoire package versions', () => {
 })
 
 test('rejects unsupported Histoire package versions', () => {
-  for (const name of ['@histoire/app', '@histoire/plugin-vue']) {
+  for (const name of ['@histoire/app', '@histoire/plugin-vue', '@histoire/plugin-nuxt']) {
     assert.throws(
       () => hooks.readPackage({ name, version: '1.0.0-beta.2' }),
       new RegExp(`No Rhapsodic Histoire patch supports ${name.replace('/', '\\/')}@1\\.0\\.0-beta\\.2`),
@@ -52,7 +55,7 @@ test('rejects unsupported Histoire package versions', () => {
   }
 })
 
-test('rejects conflicting patches for either selector', () => {
+test('rejects conflicting patches for any selector', () => {
   for (const group of histoirePatchGroups) {
     const selector = createPackageSelector(group)
     const config = {

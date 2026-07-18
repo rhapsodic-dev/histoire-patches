@@ -19,6 +19,16 @@ export const histoirePatchGroups = [
       '1.0.0-beta.1',
     ],
   },
+  {
+    packageName: '@histoire/plugin-nuxt',
+    patchFile: 'patches/histoire-plugin-nuxt.patch',
+    versions: [
+      '1.0.0-alpha.3',
+      '1.0.0-alpha.4',
+      '1.0.0-alpha.5',
+      '1.0.0-beta.1',
+    ],
+  },
 ]
 
 export function createPackageSelector(group) {

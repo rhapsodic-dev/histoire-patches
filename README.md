@@ -4,7 +4,8 @@ Shared, reproducible pnpm patches for Histoire packages used by Rhapsodic projec
 
 The package is a [pnpm config dependency](https://pnpm.io/config-dependencies). pnpm installs it
 before regular dependencies and automatically loads `pnpmfile.mjs`, which registers patches for
-every explicitly supported `@histoire/app` and `@histoire/plugin-vue` version.
+every explicitly supported `@histoire/app`, `@histoire/plugin-vue`, and
+`@histoire/plugin-nuxt` version.
 
 The patches:
 
@@ -12,6 +13,8 @@ The patches:
 - keep iframe previews invisible until their documents load and their variants report preview
   readiness;
 - report Vue story readiness only after the story's Suspense boundary resolves.
+- load Nuxt global CSS in non-iframe stories and iframe sandboxes without leaking it into Histoire's
+  hidden parent-side iframe mount.
 
 ## Consumer setup
 
@@ -30,8 +33,8 @@ Do not write the `configDependencies` entry manually. pnpm writes the version to
 After that, ordinary `pnpm install` and `pnpm update` commands apply the patch automatically. The
 resolved config-package version and integrity are recorded in `pnpm-lock.yaml`.
 
-Do not add another `patchedDependencies` entry for `@histoire/app` or
-`@histoire/plugin-vue` in the consuming repository.
+Do not add another `patchedDependencies` entry for `@histoire/app`,
+`@histoire/plugin-vue`, or `@histoire/plugin-nuxt` in the consuming repository.
 
 ## Supported Histoire versions
 
