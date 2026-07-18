@@ -9,7 +9,6 @@ every explicitly supported `@histoire/app` and `@histoire/plugin-vue` version.
 The patches:
 
 - select the first variant when a story opens;
-- suppress the empty-state icon while a story route is resolving;
 - keep iframe previews invisible until their documents load and their variants report preview
   readiness;
 - report Vue story readiness only after the story's Suspense boundary resolves.

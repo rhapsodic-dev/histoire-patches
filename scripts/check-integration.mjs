@@ -174,12 +174,12 @@ async function main() {
       throw new Error('The installed @histoire/app package still contains the replaced selection logic')
     }
 
-    if (!storyView.includes('v-if="!route.params.storyId"')) {
-      throw new Error('The installed @histoire/app package still flashes the empty-state icon during story navigation')
+    if (storyView.includes('v-if="!route.params.storyId"')) {
+      throw new Error('The installed @histoire/app package still suppresses the empty-state icon')
     }
 
-    if (!bundledStoryView.includes('!unref(route).params.storyId')) {
-      throw new Error('The installed @histoire/app bundle still flashes the empty-state icon during story navigation')
+    if (bundledStoryView.includes('!unref(route).params.storyId')) {
+      throw new Error('The installed @histoire/app bundle still suppresses the empty-state icon')
     }
 
     if (!preview.includes("'htw-invisible': !isIframeLoaded || !variant.previewReady")) {
