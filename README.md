@@ -6,6 +6,9 @@ The package is a [pnpm config dependency](https://pnpm.io/config-dependencies). 
 before regular dependencies and automatically loads `pnpmfile.mjs`, which registers the patch for
 every explicitly supported `@histoire/app` version.
 
+The patch selects the first variant when a story opens and suppresses the empty-state icon while a
+story route is resolving, avoiding a brief icon flash between the sidebar click and story render.
+
 ## Consumer setup
 
 Keep Histoire itself on its normal upstream package versions. The patch package is public on npmjs,

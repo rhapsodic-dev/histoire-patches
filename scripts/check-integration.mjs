@@ -134,10 +134,16 @@ async function main() {
     })
     await run('corepack', ['pnpm', 'install'], { cwd: fixtureDirectory })
 
-    const storyView = await readFile(path.join(
+    const storyViewPath = path.join(
       fixtureDirectory,
       'node_modules/@histoire/app/src/app/components/story/StoryView.vue',
-    ), 'utf8')
+    )
+    const bundledStoryViewPath = path.join(
+      fixtureDirectory,
+      'node_modules/@histoire/app/dist/bundled/components/story/StoryView.vue2.js',
+    )
+    const storyView = await readFile(storyViewPath, 'utf8')
+    const bundledStoryView = await readFile(bundledStoryViewPath, 'utf8')
 
     if (!storyView.includes('storyStore.currentStory?.variants.length)')) {
       throw new Error('The installed @histoire/app package was not patched')
@@ -146,6 +152,16 @@ async function main() {
     if (storyView.includes('storyStore.currentStory?.lastSelectedVariant')) {
       throw new Error('The installed @histoire/app package still contains the replaced selection logic')
     }
+
+    if (!storyView.includes('v-if="!route.params.storyId"')) {
+      throw new Error('The installed @histoire/app package still flashes the empty-state icon during story navigation')
+    }
+
+    if (!bundledStoryView.includes('!unref(route).params.storyId')) {
+      throw new Error('The installed @histoire/app bundle still flashes the empty-state icon during story navigation')
+    }
+
+    await run('node', ['--check', bundledStoryViewPath])
 
     process.stdout.write('pnpm automatically loaded and applied the Histoire patch\n')
   }

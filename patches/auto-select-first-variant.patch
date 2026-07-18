@@ -2,6 +2,12 @@ diff --git a/dist/bundled/components/story/StoryView.vue2.js b/dist/bundled/comp
 index c755cf213c87017d42d5057d3e389562e74a5b6b..ec1e3b30848c56a83ef292aa08b467e8e13caec7 100644
 --- a/dist/bundled/components/story/StoryView.vue2.js
 +++ b/dist/bundled/components/story/StoryView.vue2.js
+@@ -1,4 +1,4 @@
+-import { defineComponent, watch, ref, createBlock, createElementBlock, unref, openBlock, withCtx, createVNode } from "@histoire/vendors/vue";
++import { defineComponent, watch, ref, createBlock, createElementBlock, unref, openBlock, withCtx, createVNode, createCommentVNode } from "@histoire/vendors/vue";
+ import { Icon } from "@histoire/vendors/iconify";
+ import { useRouter, useRoute } from "@histoire/vendors/vue-router";
+ import { useStoryStore } from "../../stores/story.js";
 @@ -30,11 +30,7 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
      });
      watch(() => [storyStore.currentStory, storyStore.currentVariant], () => {
@@ -15,6 +21,20 @@ index c755cf213c87017d42d5057d3e389562e74a5b6b..ec1e3b30848c56a83ef292aa08b467e8
            setVariant(storyStore.currentStory.variants[0].id);
          }
        }
+@@ -59,10 +55,11 @@ const _sfc_main = /* @__PURE__ */ defineComponent({
+         class: "histoire-story-view histoire-no-story"
+       }, {
+         default: withCtx(() => [
+-          createVNode(unref(Icon), {
++          !unref(route).params.storyId ? (openBlock(), createBlock(unref(Icon), {
++            key: 0,
+             icon: "carbon:software-resource-resource",
+             class: "htw-w-16 htw-h-16 htw-opacity-50"
+-          })
++          })) : createCommentVNode("v-if", true)
+         ]),
+         _: 1
+       })) : (openBlock(), createElementBlock("div", _hoisted_1, [
 diff --git a/src/app/components/story/StoryView.vue b/src/app/components/story/StoryView.vue
 index 129cf2655f7ebee1114c3aa6ed4cbeb164410d04..8271c1fabde53ecd02c3f757cb05e4ff3f30a22b 100644
 --- a/src/app/components/story/StoryView.vue
@@ -33,3 +53,11 @@ index 129cf2655f7ebee1114c3aa6ed4cbeb164410d04..8271c1fabde53ecd02c3f757cb05e4ff
        setVariant(storyStore.currentStory.variants[0].id)
      }
    }
+@@ -65,6 +60,7 @@ function scrollDocsToTop() {
+     class="histoire-story-view histoire-no-story"
+   >
+     <Icon
++      v-if="!route.params.storyId"
+       icon="carbon:software-resource-resource"
+       class="htw-w-16 htw-h-16 htw-opacity-50"
+     />
