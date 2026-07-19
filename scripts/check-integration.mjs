@@ -218,7 +218,7 @@ async function main() {
       throw new Error('The installed @histoire/plugin-vue bundle still reports readiness immediately after mount')
     }
 
-    const nuxtCssCondition = '!payload.story.layout?.iframe || window.self !== window.top'
+    const nuxtCssCondition = '!payload.story?.layout?.iframe || window.self !== window.top'
 
     if (!nuxtPlugin.includes(nuxtCssCondition)) {
       throw new Error('The installed @histoire/plugin-nuxt package still loads Nuxt CSS in the hidden parent mount')
