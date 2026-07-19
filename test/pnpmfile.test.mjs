@@ -7,6 +7,7 @@ test('creates an explicit selector for every supported version', () => {
   const selectors = histoirePatchGroups.map(createPackageSelector)
 
   assert.deepEqual(selectors, [
+    'histoire@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1',
     '@histoire/app@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1',
     '@histoire/plugin-vue@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1',
     '@histoire/plugin-nuxt@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1',
@@ -26,6 +27,8 @@ test('registers all shared patches without replacing other patches', () => {
   assert.equal(result.patchedDependencies['example@1.0.0'], 'patches/example.patch')
   assert.deepEqual(result.patchedDependencies, {
     'example@1.0.0': 'patches/example.patch',
+    'histoire@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1':
+      'node_modules/.pnpm-config/@rhapsodic/pnpm-plugin-histoire-patches/patches/histoire.patch',
     '@histoire/app@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1':
       'node_modules/.pnpm-config/@rhapsodic/pnpm-plugin-histoire-patches/patches/histoire-app.patch',
     '@histoire/plugin-vue@1.0.0-alpha.3 || 1.0.0-alpha.4 || 1.0.0-alpha.5 || 1.0.0-beta.1':
@@ -36,7 +39,7 @@ test('registers all shared patches without replacing other patches', () => {
 })
 
 test('accepts supported Histoire package versions', () => {
-  for (const name of ['@histoire/app', '@histoire/plugin-vue', '@histoire/plugin-nuxt']) {
+  for (const name of ['histoire', '@histoire/app', '@histoire/plugin-vue', '@histoire/plugin-nuxt']) {
     const packageManifest = {
       name,
       version: '1.0.0-beta.1',
@@ -47,7 +50,7 @@ test('accepts supported Histoire package versions', () => {
 })
 
 test('rejects unsupported Histoire package versions', () => {
-  for (const name of ['@histoire/app', '@histoire/plugin-vue', '@histoire/plugin-nuxt']) {
+  for (const name of ['histoire', '@histoire/app', '@histoire/plugin-vue', '@histoire/plugin-nuxt']) {
     assert.throws(
       () => hooks.readPackage({ name, version: '1.0.0-beta.2' }),
       new RegExp(`No Rhapsodic Histoire patch supports ${name.replace('/', '\\/')}@1\\.0\\.0-beta\\.2`),

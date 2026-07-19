@@ -1,0 +1,154 @@
+diff --git a/dist/node/build.js b/dist/node/build.js
+--- a/dist/node/build.js
++++ b/dist/node/build.js
+@@ -135,7 +135,7 @@ export async function build(ctx) {
+             Object.assign(config.build, {
+                 outDir: ctx.config.outDir,
+                 emptyOutDir: true,
+-                cssCodeSplit: false,
++                cssCodeSplit: true,
+                 minify: false,
+                 // Don't build in SSR mode
+                 ssr: false,
+@@ -149,7 +149,6 @@ export async function build(ctx) {
+     }
+     const results = await viteBuild(buildViteConfig);
+     const result = Array.isArray(results) ? results[0] : results;
+-    const styleOutput = result.output.find(o => o.name === 'style.css' && o.type === 'asset');
+     // Preload
+     const preloadOutputs = result.output.filter(o => PRELOAD_MODULES.includes(o.name) && o.type === 'chunk');
+     const preloadHtml = generateScriptLinks(preloadOutputs.map(o => o.fileName), 'preload', ctx);
+@@ -158,12 +157,14 @@ export async function build(ctx) {
+     const prefetchHtml = generateScriptLinks(prefetchOutputs.map(o => o.fileName), 'prefetch', ctx);
+     // Index
+     const indexOutput = result.output.find(o => o.name === 'bundle-main' && o.type === 'chunk');
+-    const indexHtml = generateEntryHtml(indexOutput.fileName, styleOutput.fileName, {
++    const indexCssFiles = getCssOutputFiles(indexOutput.fileName, result);
++    const indexHtml = generateEntryHtml(indexOutput.fileName, indexCssFiles, {
+         HEAD: `${preloadHtml}${prefetchHtml}`,
+     }, ctx);
+     await writeFile('index.html', indexHtml, ctx);
+     // Sandbox
+     const sandboxOutput = result.output.find(o => o.name === 'bundle-sandbox' && o.type === 'chunk');
+-    const sandboxHtml = generateEntryHtml(sandboxOutput.fileName, styleOutput.fileName, {}, ctx);
++    const sandboxCssFiles = getCssOutputFiles(sandboxOutput.fileName, result);
++    const sandboxHtml = generateEntryHtml(sandboxOutput.fileName, sandboxCssFiles, {}, ctx);
+     await writeFile('__sandbox.html', sandboxHtml, ctx);
+     await writeFile('histoire.json', JSON.stringify(getSerializedStoryData(ctx), null, 2), ctx);
+@@ -215,8 +216,30 @@ function generateBaseHtml(head, body, ctx) {
+ </html>`;
+ }
+-function generateEntryHtml(jsEntryFile, cssEntryFile, variables, ctx) {
+-    return generateBaseHtml(`<link rel="stylesheet" href="${ctx.resolvedViteConfig.base}${cssEntryFile}">
++function getCssOutputFiles(entryFileName, result) {
++    const chunks = new Map(result.output
++        .filter(output => output.type === 'chunk')
++        .map(output => [output.fileName, output]));
++    const cssFiles = new Set();
++    const visitedChunks = new Set();
++    function collectCss(fileName) {
++        if (visitedChunks.has(fileName))
++            return;
++        visitedChunks.add(fileName);
++        const chunk = chunks.get(fileName);
++        if (!chunk)
++            return;
++        for (const cssFile of chunk.viteMetadata?.importedCss ?? [])
++            cssFiles.add(cssFile);
++        for (const importedChunk of chunk.imports)
++            collectCss(importedChunk);
++    }
++    collectCss(entryFileName);
++    return [...cssFiles];
++}
++function generateEntryHtml(jsEntryFile, cssEntryFiles, variables, ctx) {
++    const cssHtml = cssEntryFiles.map(cssEntryFile => `<link rel="stylesheet" href="${ctx.resolvedViteConfig.base}${cssEntryFile}">`).join('\n    ');
++    return generateBaseHtml(`${cssHtml}
+     ${ctx.config.theme?.favicon ? `<link rel="icon" type="${lookupMime(ctx.config.theme.favicon)}" href="${ctx.resolvedViteConfig.base}${ctx.config.theme.favicon}"/>` : ''}
+     ${variables.HEAD ?? ''}`, `<div id="app"></div>
+     <script type="module" src="${ctx.resolvedViteConfig.base}${jsEntryFile}"></script>`, ctx);
+ }
+diff --git a/src/node/build.ts b/src/node/build.ts
+--- a/src/node/build.ts
++++ b/src/node/build.ts
+@@ -169,7 +169,7 @@ export async function build(ctx: Context) {
+       Object.assign(config.build, {
+         outDir: ctx.config.outDir,
+         emptyOutDir: true,
+-        cssCodeSplit: false,
++        cssCodeSplit: true,
+         minify: false,
+         // Don't build in SSR mode
+         ssr: false,
+@@ -187,7 +187,6 @@ export async function build(ctx: Context) {
+   const results = await viteBuild(buildViteConfig)
+   const result = Array.isArray(results) ? results[0] : results as RollupOutput
+ 
+-  const styleOutput = result.output.find(o => o.name === 'style.css' && o.type === 'asset')
+ 
+   // Preload
+   const preloadOutputs = result.output.filter(o => PRELOAD_MODULES.includes(o.name) && o.type === 'chunk')
+@@ -199,14 +198,16 @@ export async function build(ctx: Context) {
+ 
+   // Index
+   const indexOutput = result.output.find(o => o.name === 'bundle-main' && o.type === 'chunk')
+-  const indexHtml = generateEntryHtml(indexOutput.fileName, styleOutput.fileName, {
++  const indexCssFiles = getCssOutputFiles(indexOutput.fileName, result)
++  const indexHtml = generateEntryHtml(indexOutput.fileName, indexCssFiles, {
+     HEAD: `${preloadHtml}${prefetchHtml}`,
+   }, ctx)
+   await writeFile('index.html', indexHtml, ctx)
+ 
+   // Sandbox
+   const sandboxOutput = result.output.find(o => o.name === 'bundle-sandbox' && o.type === 'chunk')
+-  const sandboxHtml = generateEntryHtml(sandboxOutput.fileName, styleOutput.fileName, {}, ctx)
++  const sandboxCssFiles = getCssOutputFiles(sandboxOutput.fileName, result)
++  const sandboxHtml = generateEntryHtml(sandboxOutput.fileName, sandboxCssFiles, {}, ctx)
+   await writeFile('__sandbox.html', sandboxHtml, ctx)
+ 
+   await writeFile('histoire.json', JSON.stringify(getSerializedStoryData(ctx), null, 2), ctx)
+@@ -263,13 +264,42 @@ function generateBaseHtml(head: string, body: string, ctx: Context) {
+ </html>`
+ }
+ 
+-function generateEntryHtml(jsEntryFile: string, cssEntryFile: string, variables: { HEAD?: string }, ctx: Context) {
++function getCssOutputFiles(entryFileName: string, result: RollupOutput): string[] {
++  type ViteOutputChunk = Extract<RollupOutput['output'][number], { type: 'chunk' }> & {
++    viteMetadata?: {
++      importedCss?: Set<string>
++    }
++  }
++
++  const chunks = new Map(result.output
++    .filter((output): output is ViteOutputChunk => output.type === 'chunk')
++    .map(output => [output.fileName, output]))
++  const cssFiles = new Set<string>()
++  const visitedChunks = new Set<string>()
++
++  function collectCss(fileName: string) {
++    if (visitedChunks.has(fileName)) return
++    visitedChunks.add(fileName)
++
++    const chunk = chunks.get(fileName)
++    if (!chunk) return
++
++    for (const cssFile of chunk.viteMetadata?.importedCss ?? []) cssFiles.add(cssFile)
++    for (const importedChunk of chunk.imports) collectCss(importedChunk)
++  }
++
++  collectCss(entryFileName)
++  return [...cssFiles]
++}
++
++function generateEntryHtml(jsEntryFile: string, cssEntryFiles: string[], variables: { HEAD?: string }, ctx: Context) {
++  const cssHtml = cssEntryFiles.map(cssEntryFile => `<link rel="stylesheet" href="${ctx.resolvedViteConfig.base}${cssEntryFile}">`).join('\n    ')
+   return generateBaseHtml(
+-    `<link rel="stylesheet" href="${ctx.resolvedViteConfig.base}${cssEntryFile}">
++    `${cssHtml}
+     ${ctx.config.theme?.favicon ? `<link rel="icon" type="${lookupMime(ctx.config.theme.favicon)}" href="${ctx.resolvedViteConfig.base}${ctx.config.theme.favicon}"/>` : ''}
+     ${variables.HEAD ?? ''}`,
+     `<div id="app"></div>
+     <script type="module" src="${ctx.resolvedViteConfig.base}${jsEntryFile}"></script>`,
+     ctx,
+   )
+ }

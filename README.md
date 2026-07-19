@@ -4,7 +4,7 @@ Shared, reproducible pnpm patches for Histoire packages used by Rhapsodic projec
 
 The package is a [pnpm config dependency](https://pnpm.io/config-dependencies). pnpm installs it
 before regular dependencies and automatically loads `pnpmfile.mjs`, which registers patches for
-every explicitly supported `@histoire/app`, `@histoire/plugin-vue`, and
+every explicitly supported `histoire`, `@histoire/app`, `@histoire/plugin-vue`, and
 `@histoire/plugin-nuxt` version.
 
 The patches:
@@ -12,9 +12,11 @@ The patches:
 - select the first variant when a story opens;
 - keep iframe previews invisible until their documents load and their variants report preview
   readiness;
-- report Vue story readiness only after the story's Suspense boundary resolves.
+- report Vue story readiness only after the story's Suspense boundary resolves;
 - load Nuxt global CSS in non-iframe stories and iframe sandboxes without leaking it into Histoire's
-  hidden parent-side iframe mount.
+  hidden parent-side story mount;
+- split static-build CSS by entry so application styles are loaded by the story sandbox but not by
+  the Histoire shell.
 
 ## Consumer setup
 
@@ -33,7 +35,7 @@ Do not write the `configDependencies` entry manually. pnpm writes the version to
 After that, ordinary `pnpm install` and `pnpm update` commands apply the patch automatically. The
 resolved config-package version and integrity are recorded in `pnpm-lock.yaml`.
 
-Do not add another `patchedDependencies` entry for `@histoire/app`,
+Do not add another `patchedDependencies` entry for `histoire`, `@histoire/app`,
 `@histoire/plugin-vue`, or `@histoire/plugin-nuxt` in the consuming repository.
 
 ## Supported Histoire versions
@@ -75,5 +77,5 @@ npm through GitHub's OIDC identity. If the package version already exists, the w
 successfully because npm package versions are immutable.
 
 If an existing patch no longer applies, publish a new major config-package version for the new
-artifact family. The plugin rejects unsupported versions of either patched package so an upstream
+artifact family. The plugin rejects unsupported versions of any patched package so an upstream
 upgrade cannot silently lose a fix.

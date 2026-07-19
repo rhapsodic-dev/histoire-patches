@@ -1,5 +1,15 @@
 export const histoirePatchGroups = [
   {
+    packageName: 'histoire',
+    patchFile: 'patches/histoire.patch',
+    versions: [
+      '1.0.0-alpha.3',
+      '1.0.0-alpha.4',
+      '1.0.0-alpha.5',
+      '1.0.0-beta.1',
+    ],
+  },
+  {
     packageName: '@histoire/app',
     patchFile: 'patches/histoire-app.patch',
     versions: [

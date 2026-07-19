@@ -119,6 +119,7 @@ async function main() {
         '@histoire/app': '1.0.0-beta.1',
         '@histoire/plugin-nuxt': '1.0.0-beta.1',
         '@histoire/plugin-vue': '1.0.0-beta.1',
+        'histoire': '1.0.0-beta.1',
       },
     }, undefined, 2)}\n`)
     await writeFile(path.join(fixtureDirectory, 'pnpm-workspace.yaml'), [
@@ -169,6 +170,14 @@ async function main() {
       fixtureDirectory,
       'node_modules/@histoire/plugin-nuxt/dist/index.js',
     )
+    const histoireBuildPath = path.join(
+      fixtureDirectory,
+      'node_modules/histoire/src/node/build.ts',
+    )
+    const bundledHistoireBuildPath = path.join(
+      fixtureDirectory,
+      'node_modules/histoire/dist/node/build.js',
+    )
     const storyView = await readFile(storyViewPath, 'utf8')
     const bundledStoryView = await readFile(bundledStoryViewPath, 'utf8')
     const preview = await readFile(previewPath, 'utf8')
@@ -177,6 +186,8 @@ async function main() {
     const bundledRenderStory = await readFile(bundledRenderStoryPath, 'utf8')
     const nuxtPlugin = await readFile(nuxtPluginPath, 'utf8')
     const bundledNuxtPlugin = await readFile(bundledNuxtPluginPath, 'utf8')
+    const histoireBuild = await readFile(histoireBuildPath, 'utf8')
+    const bundledHistoireBuild = await readFile(bundledHistoireBuildPath, 'utf8')
 
     if (!storyView.includes('storyStore.currentStory?.variants.length)')) {
       throw new Error('The installed @histoire/app package was not patched')
@@ -218,7 +229,7 @@ async function main() {
       throw new Error('The installed @histoire/plugin-vue bundle still reports readiness immediately after mount')
     }
 
-    const nuxtCssCondition = '!payload.story?.layout?.iframe || window.self !== window.top'
+    const nuxtCssCondition = 'window.self !== window.top || (payload.variant && payload.story?.layout?.iframe !== true)'
 
     if (!nuxtPlugin.includes(nuxtCssCondition)) {
       throw new Error('The installed @histoire/plugin-nuxt package still loads Nuxt CSS in the hidden parent mount')
@@ -244,10 +255,52 @@ async function main() {
       throw new Error('The installed @histoire/plugin-nuxt bundle does not emit conditional CSS imports')
     }
 
+    for (const [label, pluginSource] of [
+      ['package', nuxtPlugin],
+      ['bundle', bundledNuxtPlugin],
+    ]) {
+      if (!pluginSource.includes('css.push(...nuxt.options.css)')) {
+        throw new Error(`The installed @histoire/plugin-nuxt ${label} does not capture Nuxt CSS after module setup`)
+      }
+
+      if (!pluginSource.includes('nuxt.options.css = []')) {
+        throw new Error(`The installed @histoire/plugin-nuxt ${label} does not remove Nuxt CSS from the generated app entry`)
+      }
+
+      if (!pluginSource.includes("css.map(file => `    await import('${file}')`)")) {
+        throw new Error(`The installed @histoire/plugin-nuxt ${label} does not use the captured CSS in its conditional loader`)
+      }
+    }
+
+    if (!histoireBuild.includes('cssCodeSplit: true')) {
+      throw new Error('The installed histoire package does not split static-build CSS')
+    }
+
+    if (!bundledHistoireBuild.includes('cssCodeSplit: true')) {
+      throw new Error('The installed histoire bundle does not split static-build CSS')
+    }
+
+    if (!histoireBuild.includes('getCssOutputFiles(indexOutput.fileName, result)')) {
+      throw new Error('The installed histoire package does not select CSS by static entry')
+    }
+
+    if (!bundledHistoireBuild.includes('getCssOutputFiles(indexOutput.fileName, result)')) {
+      throw new Error('The installed histoire bundle does not select CSS by static entry')
+    }
+
+    if (histoireBuild.includes("o.name === 'style.css'")) {
+      throw new Error('The installed histoire package still shares one stylesheet between entries')
+    }
+
+    if (bundledHistoireBuild.includes("o.name === 'style.css'")) {
+      throw new Error('The installed histoire bundle still shares one stylesheet between entries')
+    }
+
     await run('node', ['--check', bundledStoryViewPath])
     await run('node', ['--check', bundledPreviewPath])
     await run('node', ['--check', bundledRenderStoryPath])
     await run('node', ['--check', bundledNuxtPluginPath])
+    await run('node', ['--check', bundledHistoireBuildPath])
 
     process.stdout.write('pnpm automatically loaded and applied the Histoire patches\n')
   }
